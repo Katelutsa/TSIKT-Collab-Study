@@ -10,6 +10,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDateTime;
 
@@ -21,10 +22,16 @@ public class ServerApplication {
     }
 
     @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     public CommandLineRunner demoData(
             UserRepository userRepository,
             GroupRepository groupRepository,
-            TaskRepository taskRepository
+            TaskRepository taskRepository,
+            BCryptPasswordEncoder passwordEncoder
     ) {
         return args -> {
             // якщо користувач з таким email вже існує — нічого не робимо
@@ -36,7 +43,8 @@ public class ServerApplication {
             User user = new User();
             user.setName("Test User");
             user.setEmail("test@example.com");
-            user.setPasswordHash("hashed-password");
+            String encodedPassword = passwordEncoder.encode("password123");
+            user.setPasswordHash(encodedPassword);
 
             user = userRepository.save(user);
             System.out.println("Створений користувач: " + user.getUserId() + " " + user.getEmail());

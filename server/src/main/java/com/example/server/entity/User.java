@@ -1,5 +1,9 @@
 package com.example.server.entity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 
 @Entity
 @Table(name = "users")
@@ -8,14 +12,20 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
 
+    @NotBlank(message = "Name cannot be blank")
     @Column(nullable = false)
     private String name;
 
+    @NotBlank(message = "Email cannot be blank")
+    @Email(message = "Email format is invalid")
     @Column(nullable = false, unique = true)
     private String email;
 
+    @NotBlank(message = "Password cannot be blank")
+    @Size(min = 6, message = "Password must be at least 6 characters long")
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+
 
     public User() {
     }
