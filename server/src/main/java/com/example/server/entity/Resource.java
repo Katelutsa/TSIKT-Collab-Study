@@ -1,6 +1,9 @@
 package com.example.server.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,12 +23,18 @@ public class Resource {
     @JoinColumn(name = "uploaded_by", nullable = false)
     private User uploadedBy;
 
+    @NotBlank(message = "Title cannot be blank")
+    @Size(min = 2, max = 150, message = "Title must be between 2 and 150 characters")
     @Column(nullable = false)
     private String title;
 
+    @NotBlank(message = "Type cannot be blank")
+    @Size(min = 2, max = 50, message = "Type must be between 2 and 50 characters")
     @Column(nullable = false)
     private String type;
 
+    @NotBlank(message = "Path or URL cannot be blank")
+    @Size(min = 5, max = 500, message = "Path or URL must be between 5 and 500 characters")
     @Column(name = "path_or_url", nullable = false)
     private String pathOrUrl;
 

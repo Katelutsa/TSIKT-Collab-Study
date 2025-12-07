@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.validation.Valid;
+
 import com.example.server.exception.ResourceNotFoundException;
 @RestController
 @RequestMapping("/api/tasks")
@@ -69,7 +71,6 @@ public class TaskController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime deadline
     ) {
-        Optional<Group> optionalGroup = groupRepository.findById(groupId);
 
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() ->
@@ -82,8 +83,8 @@ public class TaskController {
         public Task createTask(
                 @RequestParam("groupId") Long groupId,
                 @RequestParam("creatorId") Long creatorId,
-                @RequestBody Task task
-) {
+                @Valid @RequestBody Task task
+        ) {
             Group group = groupRepository.findById(groupId)
                     .orElseThrow(() ->
                             new ResourceNotFoundException("Group with id " + groupId + " not found"));
@@ -105,6 +106,23 @@ public class TaskController {
             return taskRepository.save(task);
         }
 
+    // PUT /api/tasks/{id} — оновлення задачі
+    @PutMapping("/{id}")
+    public Task updateTask(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody Task updatedTask
+    ) {
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
+
+        existingTask.setTitle(updatedTask.getTitle());
+        existingTask.setDescription(updatedTask.getDescription());
+        existingTask.setDeadline(updatedTask.getDeadline());
+        existingTask.setStatus(updatedTask.getStatus());
+
+        return taskRepository.save(existingTask);
+    }
+
     // PATCH /api/tasks/{id}/status?status=DONE
     @PatchMapping("/{id}/status")
     public Task updateTaskStatus(
@@ -117,6 +135,15 @@ public class TaskController {
 
         task.setStatus(status);
         return taskRepository.save(task);
+    }
+
+    // DELETE /api/tasks/{id}
+    @DeleteMapping("/{id}")
+    public void deleteTask(@PathVariable("id") Long id) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
+
+        taskRepository.delete(task);
     }
 }
 

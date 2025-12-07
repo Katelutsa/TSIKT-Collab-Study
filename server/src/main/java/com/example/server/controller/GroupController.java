@@ -5,6 +5,7 @@ import com.example.server.entity.User;
 import com.example.server.repository.GroupRepository;
 import com.example.server.repository.UserRepository;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,7 +52,7 @@ public class GroupController {
     // POST /api/groups?creatorId=1 — створення групи
     @PostMapping
     public Group createGroup(@RequestParam("creatorId") Long creatorId,
-                             @RequestBody Group group) {
+                             @Valid @RequestBody Group group) {
 
         User user = userRepository.findById(creatorId)
                 .orElseThrow(() ->
@@ -64,6 +65,29 @@ public class GroupController {
         }
 
         return groupRepository.save(group);
+    }
+
+    @PutMapping("/{id}")
+    public Group updateGroup(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody Group updatedGroup
+    ) {
+        Group existingGroup = groupRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Group with id " + id + " not found"));
+
+        existingGroup.setName(updatedGroup.getName());
+        existingGroup.setDescription(updatedGroup.getDescription());
+
+        return groupRepository.save(existingGroup);
+    }
+
+    // DELETE /api/groups/{id}
+    @DeleteMapping("/{id}")
+    public void deleteGroup(@PathVariable("id") Long id) {
+        Group group = groupRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Group with id " + id + " not found"));
+
+        groupRepository.delete(group);
     }
 
 }

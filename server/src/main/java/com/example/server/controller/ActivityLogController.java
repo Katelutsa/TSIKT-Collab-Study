@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import com.example.server.exception.ResourceNotFoundException;
 @RestController
@@ -41,16 +40,20 @@ public class ActivityLogController {
     @GetMapping("/by-user/{userId}/range")
     public List<ActivityLog> getLogsByUserAndRange(
             @PathVariable("userId") Long userId,
-            @RequestParam
+            @RequestParam("from")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime from,
-            @RequestParam
+            @RequestParam("to")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime to
     ) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("User with id " + userId + " not found"));
+
+        if (from.isAfter(to)) {
+            throw new ResourceNotFoundException("Invalid date range: 'from' must be before 'to'");
+        }
 
         return activityLogRepository.findByUserAndTimestampBetween(user, from, to);
     }
@@ -60,6 +63,10 @@ public class ActivityLogController {
     public List<ActivityLog> searchByAction(
             @RequestParam("action") String action
     ) {
+        if (action == null || action.isBlank()) {
+            throw new ResourceNotFoundException("Action parameter cannot be blank");
+        }
+
         return activityLogRepository.findByActionContainingIgnoreCase(action);
     }
 }

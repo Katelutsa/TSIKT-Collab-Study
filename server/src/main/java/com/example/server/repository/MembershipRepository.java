@@ -17,5 +17,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
 
     // Усі члени групи з конкретною роллю (наприклад "ADMIN")
     List<Membership> findByGroupAndRole(Group group, String role);
+
+    boolean existsByUserAndGroup(User user, Group group);
 }
 

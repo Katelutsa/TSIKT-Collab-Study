@@ -1,6 +1,9 @@
 package com.example.server.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -20,11 +23,16 @@ public class Task {
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    @NotBlank(message = "Title cannot be blank")
+    @Size(min = 3, max = 150, message = "Title must be between 3 and 150 characters")
     @Column(nullable = false)
     private String title;
 
+    @Size(max = 500, message = "Description cannot exceed 500 characters")
     private String description;
 
+    @NotBlank(message = "Status cannot be blank")
+    @Size(min = 2, max = 20, message = "Status must be between 2 and 20 characters")
     @Column(nullable = false)
     private String status;
 

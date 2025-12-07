@@ -1,6 +1,8 @@
 package com.example.server.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,9 +14,13 @@ public class Group {
     @Column(name = "group_id")
     private Long groupId;
 
+    @NotBlank(message = "Group name cannot be blank")
+    @Size(min = 2, max = 100, message = "Group name must be between 2 and 100 characters")
     @Column(nullable = false)
     private String name;
 
+    @NotBlank(message = "Description cannot be blank")
+    @Size(min = 5, max = 300, message = "Description must be between 5 and 300 characters")
     private String description;
 
     @ManyToOne

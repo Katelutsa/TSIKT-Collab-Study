@@ -1,10 +1,18 @@
 package com.example.server.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "memberships")
+@Table(
+        name = "memberships",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"user_id", "group_id"})
+        }
+)
 
 public class Membership {
     @Id
@@ -20,6 +28,8 @@ public class Membership {
     @JoinColumn(name = "group_id", nullable = false)
     private Group group;
 
+    @NotBlank(message = "Role cannot be blank")
+    @Size(min = 3, max = 20, message = "Role must be between 3 and 20 characters")
     @Column(nullable = false)
     private String role;
 

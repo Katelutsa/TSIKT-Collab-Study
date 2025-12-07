@@ -1,6 +1,10 @@
 package com.example.server.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -16,12 +20,16 @@ public class ActivityLog {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @NotBlank(message = "Action cannot be blank")
+    @Size(min = 2, max = 100, message = "Action must be between 2 and 100 characters")
     @Column(nullable = false)
     private String action;
 
+    @NotNull(message = "Timestamp cannot be null")
     @Column(name = "timestamp", nullable = false)
     private LocalDateTime timestamp;
 
+    @Size(max = 500, message = "Details cannot exceed 500 characters")
     private String details;
 
     public ActivityLog() {

@@ -11,7 +11,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+
+import jakarta.validation.Valid;
 
 import com.example.server.exception.ResourceNotFoundException;
 
@@ -47,7 +48,7 @@ public class ResourceController {
     public Resource uploadResource(
             @RequestParam("groupId") Long groupId,
             @RequestParam("uploadedById") Long uploadedById,
-            @RequestBody Resource resource
+            @Valid @RequestBody Resource resource
     ) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() ->
@@ -65,6 +66,34 @@ public class ResourceController {
         }
 
         return resourceRepository.save(resource);
+    }
+
+    // PUT /api/resources/{id} — оновлення ресурсу
+    @PutMapping("/{id}")
+    public Resource updateResource(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody Resource updatedResource
+    ) {
+        Resource existing = resourceRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Resource with id " + id + " not found"));
+
+        // Оновлюємо лише те, що дозволено змінювати
+        existing.setTitle(updatedResource.getTitle());
+        existing.setType(updatedResource.getType());
+        existing.setPathOrUrl(updatedResource.getPathOrUrl());
+
+        return resourceRepository.save(existing);
+    }
+
+    // DELETE /api/resources/{id} — видалити ресурс
+    @DeleteMapping("/{id}")
+    public void deleteResource(@PathVariable("id") Long id) {
+        Resource resource = resourceRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Resource with id " + id + " not found"));
+
+        resourceRepository.delete(resource);
     }
 }
 

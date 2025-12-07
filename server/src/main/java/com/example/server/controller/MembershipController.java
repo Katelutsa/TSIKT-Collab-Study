@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+
 
 import com.example.server.exception.ResourceNotFoundException;
 
@@ -55,6 +55,22 @@ public class MembershipController {
         return membershipRepository.findByGroupAndRole(group, role);
     }
 
+    // PATCH /api/memberships/{id}/role?role=ADMIN
+    @PatchMapping("/{id}/role")
+    public Membership updateMemberRole(
+            @PathVariable("id") Long id,
+            @RequestParam("role") String role
+    ) {
+        validateRole(role);
+
+        Membership membership = membershipRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Membership with id " + id + " not found"));
+
+        membership.setRole(role);
+        return membershipRepository.save(membership);
+    }
+
     // POST /api/memberships?userId=...&groupId=...&role=MEMBER
     @PostMapping
     public Membership addMemberToGroup(
@@ -70,6 +86,14 @@ public class MembershipController {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Group with id " + groupId + " not found"));
 
+        // Перевірка ролі
+        validateRole(role);
+
+// Заборона дублювання
+        if (membershipRepository.existsByUserAndGroup(user, group)) {
+            throw new ResourceNotFoundException("User is already a member of this group");
+        }
+
         Membership membership = new Membership();
         membership.setUser(user);
         membership.setGroup(group);
@@ -77,6 +101,24 @@ public class MembershipController {
         membership.setJoinedAt(LocalDateTime.now());
 
         return membershipRepository.save(membership);
+    }
+
+    private void validateRole(String role) {
+        if (!role.equalsIgnoreCase("ADMIN") &&
+                !role.equalsIgnoreCase("MEMBER") &&
+                !role.equalsIgnoreCase("OWNER")) {
+            throw new ResourceNotFoundException("Invalid role: " + role);
+        }
+    }
+
+    // DELETE /api/memberships/{id}
+    @DeleteMapping("/{id}")
+    public void deleteMembership(@PathVariable("id") Long id) {
+        Membership membership = membershipRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Membership with id " + id + " not found"));
+
+        membershipRepository.delete(membership);
     }
 }
 
