@@ -53,8 +53,8 @@ public class TaskController {
     // GET /api/tasks/by-group/{groupId}/by-status?status=OPEN
     @GetMapping("/by-group/{groupId}/by-status")
     public List<Task> getTasksByGroupAndStatus(
-            @PathVariable Long groupId,
-            @RequestParam String status
+            @PathVariable("groupId") Long groupId,
+            @RequestParam("status") String status
     ) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() ->
@@ -66,8 +66,8 @@ public class TaskController {
     // GET /api/tasks/by-group/{groupId}/due-before?deadline=2025-01-20T23:59:59
     @GetMapping("/by-group/{groupId}/due-before")
     public List<Task> getTasksByGroupAndDeadlineBefore(
-            @PathVariable Long groupId,
-            @RequestParam
+            @PathVariable("groupId") Long groupId,
+            @RequestParam("deadline")
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime deadline
     ) {
