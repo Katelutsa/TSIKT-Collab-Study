@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.client.LoginController">
+
+    <center>
+        <VBox alignment="CENTER"
+              spacing="10">
+            <children>
+                <Label text="Collab Study" style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+
+                <Label text="Email:"/>
+                <TextField fx:id="emailField" promptText="Enter email"/>
+
+                <Label text="Password:"/>
+                <PasswordField fx:id="passwordField" promptText="Enter password"/>
+
+                <Button text="Login"
+                        onAction="#onLoginClick"
+                        maxWidth="150"/>
+
+                <Button text="Register"
+                        onAction="#onRegisterClick"
+                        maxWidth="150"/>
+
+                <Label fx:id="messageLabel"
+                       text=""
+                       style="-fx-text-fill: red;"/>
+            </children>
+        </VBox>
+    </center>
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+</BorderPane>

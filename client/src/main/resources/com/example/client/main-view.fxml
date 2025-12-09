@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.example.client.MainController">
+
+    <top>
+        <Label text="Collab Study Dashboard"
+               style="-fx-font-size: 20px; -fx-padding: 10;" />
+    </top>
+
+    <center>
+        <TabPane fx:id="tabPane">
+
+            <Tab text="Groups">
+                <content>
+                    <fx:include source="groups-view.fxml"/>
+                </content>
+            </Tab>
+
+            <Tab text="Tasks">
+                <Label text="Tasks screen will be here." />
+            </Tab>
+
+            <Tab text="Resources">
+                <Label text="Resources screen will be here." />
+            </Tab>
+
+        </TabPane>
+    </center>
+</BorderPane>

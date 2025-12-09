@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.example.client.GroupsController"
+      spacing="10">
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <children>
+        <HBox spacing="10">
+            <children>
+                <Label text="Groups" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Refresh" onAction="#onRefreshClick"/>
+            </children>
+        </HBox>
+
+        <TableView fx:id="groupsTable" prefHeight="400">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="80"/>
+                <TableColumn fx:id="nameColumn" text="Name" prefWidth="200"/>
+                <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="300"/>
+            </columns>
+        </TableView>
+
+        <Label fx:id="statusLabel" text="" style="-fx-text-fill: red;"/>
+    </children>
+</VBox>
+
+
