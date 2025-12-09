@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.example.client.controller.ManageMembersController"
+      spacing="10">
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <children>
+
+        <Label fx:id="groupLabel"
+               text="Group members"
+               style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+        <TableView fx:id="membersTable" prefHeight="250">
+            <columns>
+                <TableColumn fx:id="nameColumn" text="Name" prefWidth="180"/>
+                <TableColumn fx:id="emailColumn" text="Email" prefWidth="220"/>
+                <TableColumn fx:id="roleColumn" text="Role" prefWidth="100"/>
+                <TableColumn fx:id="joinedAtColumn" text="Joined at" prefWidth="160"/>
+            </columns>
+        </TableView>
+
+        <Separator/>
+
+        <Label text="Add member by email:"/>
+        <HBox spacing="10">
+            <children>
+                <TextField fx:id="emailField" promptText="email@example.com" HBox.hgrow="ALWAYS"/>
+                <Label text="Role:"/>
+                <ComboBox fx:id="roleComboBox" prefWidth="120"/>
+                <Button text="Add" onAction="#onAddClick"/>
+            </children>
+        </HBox>
+
+        <Label fx:id="messageLabel" text="" style="-fx-text-fill: red;"/>
+
+        <HBox spacing="10">
+            <children>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Close" onAction="#onCloseClick"/>
+            </children>
+        </HBox>
+
+    </children>
+</VBox>
+

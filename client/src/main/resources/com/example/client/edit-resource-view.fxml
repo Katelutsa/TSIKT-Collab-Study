@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.example.client.controller.CreateTaskController"
+      fx:controller="com.example.client.controller.EditResourceController"
       spacing="10">
 
     <padding>
@@ -14,7 +14,8 @@
     </padding>
 
     <children>
-        <Label text="Create Task"
+
+        <Label text="Edit Resource"
                style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
 
         <HBox spacing="5">
@@ -25,30 +26,24 @@
         </HBox>
 
         <Label text="Title:"/>
-        <TextField fx:id="titleField" promptText="Enter task title"/>
+        <TextField fx:id="titleField" promptText="Enter title"/>
 
-        <Label text="Description:"/>
-        <TextArea fx:id="descriptionField"
-                  promptText="Enter description"
-                  prefRowCount="3"/>
+        <Label text="Type:"/>
+        <TextField fx:id="typeField" promptText="document, link, pdf, video, ..."/>
 
-        <Label text="Status:"/>
-        <ComboBox fx:id="statusComboBox" prefWidth="200"/>
-
-        <Label text="Deadline (optional, ISO, e.g. 2025-01-20T23:59:59):"/>
-        <TextField fx:id="deadlineField" promptText="2025-01-20T23:59:59"/>
+        <Label text="Path / URL:"/>
+        <TextField fx:id="urlField" promptText="https://... or local/path/to/file"/>
 
         <HBox spacing="10">
             <children>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Button text="Cancel" onAction="#onCancelClick"/>
-                <Button text="Create" onAction="#onCreateClick"/>
+                <Button text="Save" onAction="#onSaveClick"/>
             </children>
         </HBox>
 
-        <Label fx:id="messageLabel"
-               text=""
-               style="-fx-text-fill: red;"/>
+        <Label fx:id="messageLabel" text="" style="-fx-text-fill: red;"/>
+
     </children>
 </VBox>
 

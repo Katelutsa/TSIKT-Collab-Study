@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.example.client.GroupsController"
+      fx:controller="com.example.client.controller.GroupsController"
       spacing="10">
 
     <padding>
@@ -22,6 +22,7 @@
                 <Button text="Edit" onAction="#onEditClick"/>
                 <Button text="Delete" onAction="#onDeleteClick"/>
                 <Button text="Refresh" onAction="#onRefreshClick"/>
+                <Button text="Members..." onAction="#onManageMembersClick"/>
             </children>
         </HBox>
 

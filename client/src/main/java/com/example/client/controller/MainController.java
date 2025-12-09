@@ -1,5 +1,6 @@
-package com.example.client;
+package com.example.client.controller;
 
+import com.example.client.CurrentUser;
 import javafx.fxml.FXML;
 import javafx.scene.control.TabPane;
 

@@ -1,5 +1,7 @@
-package com.example.client;
+package com.example.client.controller;
 
+import com.example.client.CurrentUser;
+import com.example.client.GroupListItem;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;

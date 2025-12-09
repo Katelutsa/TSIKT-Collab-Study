@@ -1,4 +1,4 @@
-package com.example.client;
+package com.example.client.dto;
 
 // Simple DTO matching backend Group JSON (only required fields)
 public class GroupDto {

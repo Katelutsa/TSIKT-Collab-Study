@@ -1,5 +1,8 @@
-package com.example.client;
+package com.example.client.controller;
 
+import com.example.client.*;
+import com.example.client.dto.GroupDto;
+import com.example.client.dto.TaskDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +26,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import java.util.Optional;
 
 // Controller for the "Tasks" tab
 public class TasksController {
@@ -193,6 +200,79 @@ public class TasksController {
             statusLabel.setStyle("-fx-text-fill: red;");
             statusLabel.setText("Error opening change status dialog: " + e.getMessage());
         }
+    }
+
+    @FXML
+    private void onDeleteTaskClick() {
+        GroupListItem selectedGroup = groupComboBox.getSelectionModel().getSelectedItem();
+        if (selectedGroup == null) {
+            statusLabel.setStyle("-fx-text-fill: red;");
+            statusLabel.setText("Please select a group first.");
+            return;
+        }
+
+        TaskDto selectedTask = tasksTable.getSelectionModel().getSelectedItem();
+        if (selectedTask == null) {
+            statusLabel.setStyle("-fx-text-fill: red;");
+            statusLabel.setText("Please select a task to delete.");
+            return;
+        }
+
+        // Confirm dialog
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Delete Task");
+        alert.setHeaderText("Delete task \"" + selectedTask.getTitle() + "\"?");
+        alert.setContentText("This action cannot be undone.");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isEmpty() || result.get() != ButtonType.OK) {
+            // User canceled
+            return;
+        }
+
+        statusLabel.setStyle("-fx-text-fill: black;");
+        statusLabel.setText("Deleting task...");
+
+        Long groupId = selectedGroup.getGroupId();
+
+        new Thread(() -> {
+            try {
+                String url = "http://localhost:8080/api/tasks/" + selectedTask.getTaskId();
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .DELETE()
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+                int statusCode = response.statusCode();
+                if (statusCode == 200 || statusCode == 204) {
+                    Platform.runLater(() -> {
+                        reloadTasksForGroup(groupId);
+                        statusLabel.setStyle("-fx-text-fill: green;");
+                        statusLabel.setText("Task deleted.");
+                    });
+                } else {
+                    String msg = "Failed to delete task. Status: " + statusCode;
+                    Platform.runLater(() -> {
+                        statusLabel.setStyle("-fx-text-fill: red;");
+                        statusLabel.setText(msg);
+                    });
+                }
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    statusLabel.setStyle("-fx-text-fill: red;");
+                    statusLabel.setText("Error: " + e.getMessage());
+                });
+            }
+        }).start();
+    }
+
+
+    @FXML
+    private void onReloadGroupsClick() {
+        loadGroupsForCurrentUser();
     }
 
 

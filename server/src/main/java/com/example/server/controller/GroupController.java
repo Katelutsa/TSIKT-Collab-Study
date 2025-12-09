@@ -49,6 +49,15 @@ public class GroupController {
         return groupRepository.findByCreatedBy(user);
     }
 
+    @GetMapping("/by-member/{userId}")
+    public List<Group> getGroupsByMember(@PathVariable("userId") Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User with id " + userId + " not found"));
+
+        return groupRepository.findAllByMember(user);
+    }
+
     // POST /api/groups?creatorId=1 — створення групи
     @PostMapping
     public Group createGroup(@RequestParam("creatorId") Long creatorId,

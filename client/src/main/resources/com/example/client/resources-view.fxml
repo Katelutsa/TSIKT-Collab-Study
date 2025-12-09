@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.example.client.controller.TasksController"
+      fx:controller="com.example.client.controller.ResourcesController"
       spacing="10">
 
     <padding>
@@ -17,34 +17,33 @@
 
         <HBox spacing="10">
             <children>
-                <Label text="Tasks" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                <Label text="Resources"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
 
                 <Label text="Group:"/>
                 <ComboBox fx:id="groupComboBox" prefWidth="200"/>
 
                 <Button text="Reload groups" onAction="#onReloadGroupsClick"/>
-                <Button text="Load tasks" onAction="#onLoadTasksClick"/>
-                <Button text="Create Task" onAction="#onCreateTaskClick"/>
-                <Button text="Edit Task" onAction="#onEditTaskClick"/>
-                <Button text="Change Status" onAction="#onChangeStatusClick"/>
-                <Button text="Delete Task" onAction="#onDeleteTaskClick"/>
+                <Button text="Load resources" onAction="#onLoadResourcesClick"/>
+                <Button text="Create Resource" onAction="#onCreateResourceClick"/>
+                <Button text="Edit Resource" onAction="#onEditResourceClick"/>
+                <Button text="Delete Resource" onAction="#onDeleteResourceClick"/>
 
                 <Region HBox.hgrow="ALWAYS"/>
             </children>
         </HBox>
 
-
-        <TableView fx:id="tasksTable" prefHeight="400">
+        <TableView fx:id="resourcesTable" prefHeight="400">
             <columns>
                 <TableColumn fx:id="idColumn" text="ID" prefWidth="60"/>
                 <TableColumn fx:id="titleColumn" text="Title" prefWidth="200"/>
-                <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
-                <TableColumn fx:id="deadlineColumn" text="Deadline" prefWidth="180"/>
-                <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="300"/>
+                <TableColumn fx:id="typeColumn" text="Type" prefWidth="120"/>
+                <TableColumn fx:id="urlColumn" text="Path / URL" prefWidth="300"/>
+                <TableColumn fx:id="uploadedAtColumn" text="Uploaded at" prefWidth="180"/>
             </columns>
         </TableView>
 
         <Label fx:id="statusLabel" text="" style="-fx-text-fill: red;"/>
+
     </children>
 </VBox>
-

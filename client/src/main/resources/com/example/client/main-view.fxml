@@ -4,7 +4,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.example.client.MainController">
+            fx:controller="com.example.client.controller.MainController">
 
     <top>
         <Label text="Collab Study Dashboard"
@@ -27,7 +27,9 @@
             </Tab>
 
             <Tab text="Resources">
-                <Label text="Resources screen will be here." />
+                <content>
+                    <fx:include source="resources-view.fxml"/>
+                </content>
             </Tab>
 
         </TabPane>

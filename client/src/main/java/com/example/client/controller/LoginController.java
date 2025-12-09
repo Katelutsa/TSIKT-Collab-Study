@@ -1,5 +1,7 @@
-package com.example.client;
+package com.example.client.controller;
 
+import com.example.client.ClientApplication;
+import com.example.client.CurrentUser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
@@ -16,7 +18,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import java.io.IOException;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+
+import com.example.client.controller.RegisterController;
 
 // Controller for login screen
 public class LoginController {
@@ -113,10 +121,28 @@ public class LoginController {
 
     @FXML
     private void onRegisterClick() {
-        // TODO: Later: open registration view
-        messageLabel.setStyle("-fx-text-fill: blue;");
-        messageLabel.setText("Registration screen is not implemented yet.");
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    ClientApplication.class.getResource("register-view.fxml")
+            );
+            Parent root = loader.load();
+
+            RegisterController controller = loader.getController();
+
+            Stage dialog = new Stage();
+            dialog.setTitle("Collab Study - Register");
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setScene(new Scene(root));
+
+            controller.setStage(dialog);
+
+            dialog.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
+
 
     // DTO for login request body
     public static class LoginRequest {
@@ -184,13 +210,18 @@ public class LoginController {
 
     private void openMainWindow() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("main-view.fxml"));
+            FXMLLoader loader = new FXMLLoader(
+                    ClientApplication.class.getResource("main-view.fxml")
+            );
+
             Scene scene = new Scene(loader.load(), 800, 600);
 
             Stage stage = new Stage();
             stage.setTitle("Collab Study - Dashboard");
             stage.setScene(scene);
             stage.show();
+
+            System.out.println("Main screen loaded.");
         } catch (Exception e) {
             e.printStackTrace();
         }

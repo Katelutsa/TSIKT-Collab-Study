@@ -1,5 +1,8 @@
-package com.example.client;
+package com.example.client.controller;
 
+import com.example.client.ClientApplication;
+import com.example.client.CurrentUser;
+import com.example.client.dto.GroupDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +21,8 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import com.example.client.GroupListItem;
+
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -188,9 +193,6 @@ public class GroupsController {
     }
 
     private void loadGroups() {
-        statusLabel.setStyle("-fx-text-fill: black;");
-        statusLabel.setText("Loading groups...");
-
         Long userId = CurrentUser.getUserId();
         if (userId == null) {
             statusLabel.setStyle("-fx-text-fill: red;");
@@ -198,43 +200,110 @@ public class GroupsController {
             return;
         }
 
+        statusLabel.setStyle("-fx-text-fill: black;");
+        statusLabel.setText("Loading groups...");
+
         new Thread(() -> {
             try {
-                String url = "http://localhost:8080/api/groups/by-creator/" + userId;
-
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
+                // 1) Groups created by this user
+                String createdUrl = "http://localhost:8080/api/groups/by-creator/" + userId;
+                HttpRequest createdRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(createdUrl))
                         .GET()
                         .build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> createdResponse =
+                        httpClient.send(createdRequest, HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() == 200) {
-                    List<GroupDto> groupList = objectMapper.readValue(
-                            response.body(),
-                            new TypeReference<List<GroupDto>>() {}
+                List<GroupDto> createdGroups = List.of();
+                if (createdResponse.statusCode() == 200) {
+                    createdGroups = objectMapper.readValue(
+                            createdResponse.body(),
+                            new com.fasterxml.jackson.core.type.TypeReference<List<GroupDto>>() {}
                     );
-
-                    Platform.runLater(() -> {
-                        groupsData.setAll(groupList);
-                        statusLabel.setStyle("-fx-text-fill: green;");
-                        statusLabel.setText("Loaded " + groupList.size() + " groups.");
-                    });
-                } else {
-                    String errorText = "Failed to load groups. Status: " + response.statusCode();
-                    Platform.runLater(() -> {
-                        statusLabel.setStyle("-fx-text-fill: red;");
-                        statusLabel.setText(errorText);
-                    });
                 }
+
+                // 2) Groups where user is member
+                String memberUrl = "http://localhost:8080/api/groups/by-member/" + userId;
+                HttpRequest memberRequest = HttpRequest.newBuilder()
+                        .uri(URI.create(memberUrl))
+                        .GET()
+                        .build();
+
+                HttpResponse<String> memberResponse =
+                        httpClient.send(memberRequest, HttpResponse.BodyHandlers.ofString());
+
+                List<GroupDto> memberGroups = List.of();
+                if (memberResponse.statusCode() == 200) {
+                    memberGroups = objectMapper.readValue(
+                            memberResponse.body(),
+                            new com.fasterxml.jackson.core.type.TypeReference<List<GroupDto>>() {}
+                    );
+                }
+
+                // 3) Об’єднуємо без дублікатів
+                java.util.Map<Long, GroupDto> map = new java.util.HashMap<>();
+
+                for (GroupDto g : createdGroups) {
+                    map.put(g.getGroupId(), g);
+                }
+                for (GroupDto g : memberGroups) {
+                    map.put(g.getGroupId(), g);
+                }
+
+                java.util.List<GroupDto> combined = new java.util.ArrayList<>(map.values());
+
+                Platform.runLater(() -> {
+                    groupsData.clear();
+                    groupsData.addAll(combined);
+
+                    statusLabel.setStyle("-fx-text-fill: green;");
+                    statusLabel.setText("Loaded " + combined.size() + " groups.");
+                });
+
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     statusLabel.setStyle("-fx-text-fill: red;");
-                    statusLabel.setText("Error: " + e.getMessage());
+                    statusLabel.setText("Error loading groups: " + e.getMessage());
                 });
             }
         }).start();
     }
+
+    @FXML
+    private void onManageMembersClick() {
+        GroupDto selectedGroup = groupsTable.getSelectionModel().getSelectedItem();
+        if (selectedGroup == null) {
+            statusLabel.setStyle("-fx-text-fill: red;");
+            statusLabel.setText("Please select a group first.");
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    ClientApplication.class.getResource("manage-members-view.fxml")
+            );
+            Parent root = loader.load();
+
+            ManageMembersController controller = loader.getController();
+            controller.setGroup(selectedGroup);
+
+            Stage dialog = new Stage();
+            dialog.setTitle("Group members");
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            dialog.setScene(new Scene(root));
+
+            controller.setStage(dialog);
+
+            dialog.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            statusLabel.setStyle("-fx-text-fill: red;");
+            statusLabel.setText("Error opening members dialog: " + e.getMessage());
+        }
+    }
+
 }
 
 

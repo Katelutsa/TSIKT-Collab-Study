@@ -6,7 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.example.client.ChangeTaskStatusController"
+      fx:controller="com.example.client.controller.ChangeTaskStatusController"
       spacing="10">
 
     <padding>

@@ -1,5 +1,6 @@
-package com.example.client;
+package com.example.client.controller;
 
+import com.example.client.CurrentUser;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
@@ -14,8 +15,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-// Controller for edit group dialog
-public class EditGroupController {
+// Controller for create group dialog
+public class CreateGroupController {
 
     @FXML
     private TextField nameField;
@@ -32,23 +33,15 @@ public class EditGroupController {
 
     private GroupsController parentController;
     private Stage stage;
-    private GroupDto group; // currently edited group
 
+    // Parent controller setter
     public void setParentController(GroupsController parentController) {
         this.parentController = parentController;
     }
 
+    // Stage setter
     public void setStage(Stage stage) {
         this.stage = stage;
-    }
-
-    public void setGroup(GroupDto group) {
-        this.group = group;
-        if (group != null) {
-            // Fill fields with current values
-            nameField.setText(group.getName());
-            descriptionField.setText(group.getDescription());
-        }
     }
 
     @FXML
@@ -57,12 +50,7 @@ public class EditGroupController {
     }
 
     @FXML
-    private void onSaveClick() {
-        if (group == null) {
-            messageLabel.setText("No group selected.");
-            return;
-        }
-
+    private void onCreateClick() {
         String name = nameField.getText();
         String description = descriptionField.getText();
 
@@ -71,24 +59,31 @@ public class EditGroupController {
             return;
         }
 
-        messageLabel.setText("Updating group...");
+        Long userId = CurrentUser.getUserId();
+        if (userId == null) {
+            messageLabel.setText("No logged-in user.");
+            return;
+        }
+
+        messageLabel.setText("Creating group...");
 
         new Thread(() -> {
             try {
-                GroupUpdateRequest body = new GroupUpdateRequest(name, description);
+                GroupCreateRequest body = new GroupCreateRequest(name, description);
                 String jsonBody = objectMapper.writeValueAsString(body);
 
-                String url = "http://localhost:8080/api/groups/" + group.getGroupId();
+                String url = "http://localhost:8080/api/groups?creatorId=" + userId;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("Content-Type", "application/json")
-                        .PUT(HttpRequest.BodyPublishers.ofString(jsonBody))
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                         .build();
 
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() == 200) {
+                if (response.statusCode() == 200 || response.statusCode() == 201) {
+                    // Success: refresh groups and close dialog
                     Platform.runLater(() -> {
                         if (parentController != null) {
                             parentController.reloadGroups();
@@ -98,7 +93,7 @@ public class EditGroupController {
                         }
                     });
                 } else {
-                    String msg = "Failed to update group. Status: " + response.statusCode();
+                    String msg = "Failed to create group. Status: " + response.statusCode();
                     Platform.runLater(() -> messageLabel.setText(msg));
                 }
             } catch (Exception e) {
@@ -114,15 +109,15 @@ public class EditGroupController {
         }
     }
 
-    // DTO for update group request (matches fields we want to change)
-    public static class GroupUpdateRequest {
+    // DTO for create group request
+    public static class GroupCreateRequest {
         private String name;
         private String description;
 
-        public GroupUpdateRequest() {
+        public GroupCreateRequest() {
         }
 
-        public GroupUpdateRequest(String name, String description) {
+        public GroupCreateRequest(String name, String description) {
             this.name = name;
             this.description = description;
         }
