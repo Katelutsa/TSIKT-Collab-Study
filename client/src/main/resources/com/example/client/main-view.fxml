@@ -21,7 +21,9 @@
             </Tab>
 
             <Tab text="Tasks">
-                <Label text="Tasks screen will be here." />
+                <content>
+                    <fx:include source="tasks-view.fxml"/>
+                </content>
             </Tab>
 
             <Tab text="Resources">

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.example.client.TasksController"
+      spacing="10">
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <children>
+
+        <HBox spacing="10">
+            <children>
+                <Label text="Tasks" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+                <Label text="Group:"/>
+                <ComboBox fx:id="groupComboBox" prefWidth="200"/>
+
+                <Button text="Load tasks" onAction="#onLoadTasksClick"/>
+                <Button text="Create Task" onAction="#onCreateTaskClick"/>
+                <Button text="Edit Task" onAction="#onEditTaskClick"/>
+                <Button text="Change Status" onAction="#onChangeStatusClick"/>
+
+                <Region HBox.hgrow="ALWAYS"/>
+            </children>
+        </HBox>
+
+
+        <TableView fx:id="tasksTable" prefHeight="400">
+            <columns>
+                <TableColumn fx:id="idColumn" text="ID" prefWidth="60"/>
+                <TableColumn fx:id="titleColumn" text="Title" prefWidth="200"/>
+                <TableColumn fx:id="statusColumn" text="Status" prefWidth="100"/>
+                <TableColumn fx:id="deadlineColumn" text="Deadline" prefWidth="180"/>
+                <TableColumn fx:id="descriptionColumn" text="Description" prefWidth="300"/>
+            </columns>
+        </TableView>
+
+        <Label fx:id="statusLabel" text="" style="-fx-text-fill: red;"/>
+    </children>
+</VBox>
+

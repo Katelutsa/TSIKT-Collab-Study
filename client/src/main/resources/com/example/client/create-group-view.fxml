@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.example.client.CreateGroupController"
+      spacing="10">
+
+    <padding>
+        <Insets top="10" right="10" bottom="10" left="10"/>
+    </padding>
+
+    <children>
+        <Label text="Create New Group"
+               style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+        <Label text="Name:"/>
+        <TextField fx:id="nameField" promptText="Enter group name"/>
+
+        <Label text="Description:"/>
+        <TextArea fx:id="descriptionField"
+                  promptText="Enter description"
+                  prefRowCount="3"/>
+
+        <HBox spacing="10">
+            <children>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Cancel" onAction="#onCancelClick"/>
+                <Button text="Create" onAction="#onCreateClick"/>
+            </children>
+        </HBox>
+
+        <Label fx:id="messageLabel"
+               text=""
+               style="-fx-text-fill: red;"/>
+    </children>
+</VBox>
+

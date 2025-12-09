@@ -18,6 +18,9 @@
             <children>
                 <Label text="Groups" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
                 <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Create Group" onAction="#onCreateClick"/>
+                <Button text="Edit" onAction="#onEditClick"/>
+                <Button text="Delete" onAction="#onDeleteClick"/>
                 <Button text="Refresh" onAction="#onRefreshClick"/>
             </children>
         </HBox>
