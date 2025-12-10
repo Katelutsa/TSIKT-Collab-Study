@@ -1,5 +1,6 @@
 package com.example.client.controller;
 
+import com.example.client.CurrentUser;
 import com.example.client.GroupListItem;
 import com.example.client.dto.TaskDto;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -73,6 +74,8 @@ public class EditTaskController {
     @FXML
     private void initialize() {
         messageLabel.setText("");
+        messageLabel.setStyle("-fx-text-fill: red;");
+
         statusComboBox.setItems(FXCollections.observableArrayList(
                 "OPEN", "IN_PROGRESS", "DONE"
         ));
@@ -82,6 +85,7 @@ public class EditTaskController {
     @FXML
     private void onSaveClick() {
         if (task == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("No task selected.");
             return;
         }
@@ -92,10 +96,19 @@ public class EditTaskController {
         String deadlineText = deadlineField.getText();
 
         if (title == null || title.isBlank()) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("Title is required.");
             return;
         }
 
+        Long actorId = CurrentUser.getUserId();
+        if (actorId == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setText("No logged-in user (actorId is null).");
+            return;
+        }
+
+        messageLabel.setStyle("-fx-text-fill: black;");
         messageLabel.setText("Updating task...");
 
         new Thread(() -> {
@@ -104,11 +117,18 @@ public class EditTaskController {
                 body.setTitle(title);
                 body.setDescription(description == null ? "" : description);
                 body.setStatus(status);
-                body.setDeadline(deadlineText == null || deadlineText.isBlank() ? null : deadlineText);
+                body.setDeadline(
+                        deadlineText == null || deadlineText.isBlank()
+                                ? null
+                                : deadlineText
+                );
 
                 String jsonBody = objectMapper.writeValueAsString(body);
 
-                String url = "http://localhost:8080/api/tasks/" + task.getTaskId();
+                // 🔹 додаємо actorId до URL
+                String url = "http://localhost:8080/api/tasks/"
+                        + task.getTaskId()
+                        + "?actorId=" + actorId;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -130,10 +150,21 @@ public class EditTaskController {
                     });
                 } else {
                     String msg = "Failed to update task. Status: " + statusCode;
-                    Platform.runLater(() -> messageLabel.setText(msg));
+                    String bodyText = response.body();
+                    if (bodyText != null && !bodyText.isBlank()) {
+                        msg += "\n" + bodyText;
+                    }
+                    String finalMsg = msg;
+                    Platform.runLater(() -> {
+                        messageLabel.setStyle("-fx-text-fill: red;");
+                        messageLabel.setText(finalMsg);
+                    });
                 }
             } catch (Exception e) {
-                Platform.runLater(() -> messageLabel.setText("Error: " + e.getMessage()));
+                Platform.runLater(() -> {
+                    messageLabel.setStyle("-fx-text-fill: red;");
+                    messageLabel.setText("Error: " + e.getMessage());
+                });
             }
         }).start();
     }
@@ -188,4 +219,5 @@ public class EditTaskController {
         }
     }
 }
+
 

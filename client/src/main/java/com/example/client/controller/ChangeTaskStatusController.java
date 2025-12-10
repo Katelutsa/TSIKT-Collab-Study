@@ -1,5 +1,6 @@
 package com.example.client.controller;
 
+import com.example.client.CurrentUser;
 import com.example.client.GroupListItem;
 import com.example.client.dto.TaskDto;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -53,7 +54,6 @@ public class ChangeTaskStatusController {
         }
         if (task != null) {
             taskLabel.setText(task.getTitle() + " (id=" + task.getTaskId() + ")");
-            // Встановлюємо поточний статус як вибраний
             statusComboBox.getSelectionModel().select(task.getStatus());
         }
     }
@@ -61,6 +61,8 @@ public class ChangeTaskStatusController {
     @FXML
     private void initialize() {
         messageLabel.setText("");
+        messageLabel.setStyle("-fx-text-fill: red;");
+
         statusComboBox.setItems(FXCollections.observableArrayList(
                 "OPEN", "IN_PROGRESS", "DONE"
         ));
@@ -70,22 +72,34 @@ public class ChangeTaskStatusController {
     @FXML
     private void onSaveClick() {
         if (task == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("No task selected.");
             return;
         }
 
         String newStatus = statusComboBox.getSelectionModel().getSelectedItem();
         if (newStatus == null || newStatus.isBlank()) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("Please choose status.");
             return;
         }
 
+        Long actorId = CurrentUser.getUserId();
+        if (actorId == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setText("No logged-in user (actorId is null).");
+            return;
+        }
+
+        messageLabel.setStyle("-fx-text-fill: black;");
         messageLabel.setText("Updating status...");
 
         new Thread(() -> {
             try {
+                // 🔹 додаємо actorId до PATCH-запиту
                 String url = "http://localhost:8080/api/tasks/" + task.getTaskId()
-                        + "/status?status=" + newStatus;
+                        + "/status?status=" + newStatus
+                        + "&actorId=" + actorId;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -106,10 +120,21 @@ public class ChangeTaskStatusController {
                     });
                 } else {
                     String msg = "Failed to update status. Status: " + statusCode;
-                    Platform.runLater(() -> messageLabel.setText(msg));
+                    String body = response.body();
+                    if (body != null && !body.isBlank()) {
+                        msg += "\n" + body;
+                    }
+                    String finalMsg = msg;
+                    Platform.runLater(() -> {
+                        messageLabel.setStyle("-fx-text-fill: red;");
+                        messageLabel.setText(finalMsg);
+                    });
                 }
             } catch (Exception e) {
-                Platform.runLater(() -> messageLabel.setText("Error: " + e.getMessage()));
+                Platform.runLater(() -> {
+                    messageLabel.setStyle("-fx-text-fill: red;");
+                    messageLabel.setText("Error: " + e.getMessage());
+                });
             }
         }).start();
     }
@@ -121,4 +146,5 @@ public class ChangeTaskStatusController {
         }
     }
 }
+
 

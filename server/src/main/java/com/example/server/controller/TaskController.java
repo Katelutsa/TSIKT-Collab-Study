@@ -8,6 +8,7 @@ import com.example.server.repository.GroupRepository;
 import com.example.server.repository.TaskRepository;
 import com.example.server.repository.UserRepository;
 import com.example.server.service.ActivityLogService;
+import com.example.server.service.MembershipService;
 import com.example.server.websocket.WebSocketEventController;
 import com.example.server.websocket.dto.WsMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,19 +29,22 @@ public class TaskController {
     private final ActivityLogService activityLogService;
     private final WebSocketEventController webSocketEventController;
     private final ObjectMapper objectMapper;
+    private final MembershipService membershipService;
 
     public TaskController(TaskRepository taskRepository,
                           GroupRepository groupRepository,
                           UserRepository userRepository,
                           ActivityLogService activityLogService,
                           WebSocketEventController webSocketEventController,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          MembershipService membershipService) {
         this.taskRepository = taskRepository;
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.activityLogService = activityLogService;
         this.webSocketEventController = webSocketEventController;
         this.objectMapper = objectMapper;
+        this.membershipService = membershipService;
     }
 
     // === HELPERS ===
@@ -117,6 +121,11 @@ public class TaskController {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("User with id " + creatorId + " not found"));
 
+        // 🔹 тільки admin або owner можуть створювати задачі
+        if (!membershipService.isAdminOrOwner(creator, group)) {
+            throw new ResourceNotFoundException("Only group owner or admin can create tasks in this group.");
+        }
+
         task.setGroup(group);
         task.setCreatedBy(creator);
 
@@ -129,27 +138,39 @@ public class TaskController {
 
         Task saved = taskRepository.save(task);
 
-        // 🔹 лог активності
+        // лог активності
         activityLogService.log(
                 creatorId,
                 "TASK_CREATED",
                 "Created task '" + saved.getTitle() + "' (id=" + saved.getTaskId() + ") in group '" + group.getName() + "'"
         );
 
-        // 🔹 WebSocket подія
+        // WebSocket подія
         sendWsEvent("TASK_CREATED", saved.getTaskId());
 
         return saved;
     }
 
-    // PUT /api/tasks/{id} — оновлення задачі
+    // PUT /api/tasks/{id}?actorId=...
+    // редагувати може будь-який член групи
     @PutMapping("/{id}")
     public Task updateTask(
             @PathVariable("id") Long id,
+            @RequestParam("actorId") Long actorId,
             @Valid @RequestBody Task updatedTask
     ) {
         Task existingTask = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
+
+        Group group = existingTask.getGroup();
+        User actor = userRepository.findById(actorId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User with id " + actorId + " not found"));
+
+        // редагувати може будь-який член групи
+        if (!membershipService.isMember(actor, group)) {
+            throw new ResourceNotFoundException("Only group members can update tasks in this group.");
+        }
 
         existingTask.setTitle(updatedTask.getTitle());
         existingTask.setDescription(updatedTask.getDescription());
@@ -158,12 +179,8 @@ public class TaskController {
 
         Task saved = taskRepository.save(existingTask);
 
-        Long actorId = (saved.getCreatedBy() != null)
-                ? saved.getCreatedBy().getUserId()
-                : null;
-
         activityLogService.log(
-                actorId,
+                actor.getUserId(),
                 "TASK_UPDATED",
                 "Updated task '" + saved.getTitle() + "' (id=" + saved.getTaskId() + ")"
         );
@@ -173,26 +190,33 @@ public class TaskController {
         return saved;
     }
 
-    // PATCH /api/tasks/{id}/status?status=DONE
+    // PATCH /api/tasks/{id}/status?status=DONE&actorId=...
     @PatchMapping("/{id}/status")
     public Task updateTaskStatus(
             @PathVariable("id") Long id,
-            @RequestParam("status") String status
+            @RequestParam("status") String status,
+            @RequestParam("actorId") Long actorId
     ) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Task with id " + id + " not found"));
 
+        Group group = task.getGroup();
+        User actor = userRepository.findById(actorId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User with id " + actorId + " not found"));
+
+        // змінювати статус може будь-який член групи
+        if (!membershipService.isMember(actor, group)) {
+            throw new ResourceNotFoundException("Only group members can change task status in this group.");
+        }
+
         task.setStatus(status);
 
         Task saved = taskRepository.save(task);
 
-        Long actorId = (saved.getCreatedBy() != null)
-                ? saved.getCreatedBy().getUserId()
-                : null;
-
         activityLogService.log(
-                actorId,
+                actor.getUserId(),
                 "TASK_STATUS_CHANGED",
                 "Changed status of task '" + saved.getTitle() + "' (id=" + saved.getTaskId() + ") to " + status
         );
@@ -202,15 +226,24 @@ public class TaskController {
         return saved;
     }
 
-    // DELETE /api/tasks/{id}
+    // DELETE /api/tasks/{id}?actorId=...
     @DeleteMapping("/{id}")
-    public void deleteTask(@PathVariable("id") Long id) {
+    public void deleteTask(
+            @PathVariable("id") Long id,
+            @RequestParam("actorId") Long actorId
+    ) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
 
-        Long actorId = (task.getCreatedBy() != null)
-                ? task.getCreatedBy().getUserId()
-                : null;
+        Group group = task.getGroup();
+        User actor = userRepository.findById(actorId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User with id " + actorId + " not found"));
+
+        // видаляти можуть тільки admin + owner
+        if (!membershipService.isAdminOrOwner(actor, group)) {
+            throw new ResourceNotFoundException("Only group owner or admin can delete tasks in this group.");
+        }
 
         String title = task.getTitle();
         Long taskId = task.getTaskId();
@@ -218,7 +251,7 @@ public class TaskController {
         taskRepository.delete(task);
 
         activityLogService.log(
-                actorId,
+                actor.getUserId(),
                 "TASK_DELETED",
                 "Deleted task '" + title + "' (id=" + taskId + ")"
         );

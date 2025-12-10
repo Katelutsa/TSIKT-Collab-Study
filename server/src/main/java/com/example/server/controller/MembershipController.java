@@ -3,17 +3,15 @@ package com.example.server.controller;
 import com.example.server.entity.Group;
 import com.example.server.entity.Membership;
 import com.example.server.entity.User;
+import com.example.server.exception.ResourceNotFoundException;
 import com.example.server.repository.GroupRepository;
 import com.example.server.repository.MembershipRepository;
 import com.example.server.repository.UserRepository;
-
+import com.example.server.service.MembershipService;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-
-import com.example.server.exception.ResourceNotFoundException;
 
 @RestController
 @RequestMapping("/api/memberships")
@@ -22,13 +20,16 @@ public class MembershipController {
     private final MembershipRepository membershipRepository;
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
+    private final MembershipService membershipService;
 
     public MembershipController(MembershipRepository membershipRepository,
                                 GroupRepository groupRepository,
-                                UserRepository userRepository) {
+                                UserRepository userRepository,
+                                MembershipService membershipService) {
         this.membershipRepository = membershipRepository;
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
+        this.membershipService = membershipService;
     }
 
     // GET /api/memberships/by-group/{groupId}
@@ -71,12 +72,13 @@ public class MembershipController {
         return membershipRepository.save(membership);
     }
 
-    // POST /api/memberships?userId=...&groupId=...&role=MEMBER
+    // POST /api/memberships?userId=...&groupId=...&role=MEMBER&actorId=...
     @PostMapping
     public Membership addMemberToGroup(
-            @RequestParam("userId") Long userId,
+            @RequestParam("userId") Long userId,     // кого додаємо
             @RequestParam("groupId") Long groupId,
-            @RequestParam("role") String role
+            @RequestParam("role") String role,
+            @RequestParam("actorId") Long actorId    // хто додає
     ) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
@@ -86,10 +88,19 @@ public class MembershipController {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Group with id " + groupId + " not found"));
 
+        User actor = userRepository.findById(actorId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User (actor) with id " + actorId + " not found"));
+
+        // 🔹 тільки owner може додавати учасників
+        if (!membershipService.isOwner(actor, group)) {
+            throw new ResourceNotFoundException("Only group owner can add members to this group.");
+        }
+
         // Перевірка ролі
         validateRole(role);
 
-// Заборона дублювання
+        // Заборона дублювання
         if (membershipRepository.existsByUserAndGroup(user, group)) {
             throw new ResourceNotFoundException("User is already a member of this group");
         }
@@ -121,4 +132,5 @@ public class MembershipController {
         membershipRepository.delete(membership);
     }
 }
+
 

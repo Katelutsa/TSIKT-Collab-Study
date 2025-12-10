@@ -225,6 +225,13 @@ public class TasksController {
             return;
         }
 
+        Long actorId = CurrentUser.getUserId();
+        if (actorId == null) {
+            statusLabel.setStyle("-fx-text-fill: red;");
+            statusLabel.setText("No logged-in user (actorId is null).");
+            return;
+        }
+
         // Confirm dialog
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Delete Task");
@@ -244,7 +251,10 @@ public class TasksController {
 
         new Thread(() -> {
             try {
-                String url = "http://localhost:8080/api/tasks/" + selectedTask.getTaskId();
+                // 🔹 додаємо actorId до запиту
+                String url = "http://localhost:8080/api/tasks/"
+                        + selectedTask.getTaskId()
+                        + "?actorId=" + actorId;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -415,6 +425,7 @@ public class TasksController {
         }).start();
     }
 }
+
 
 
 

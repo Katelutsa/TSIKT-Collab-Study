@@ -66,6 +66,8 @@ public class CreateTaskController {
     @FXML
     private void initialize() {
         messageLabel.setText("");
+        messageLabel.setStyle("-fx-text-fill: red;");
+
         statusComboBox.setItems(FXCollections.observableArrayList(
                 "OPEN", "IN_PROGRESS", "DONE"
         ));
@@ -80,21 +82,25 @@ public class CreateTaskController {
         String deadlineText = deadlineField.getText();
 
         if (title == null || title.isBlank()) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("Title is required.");
             return;
         }
 
         if (groupId == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("No group selected.");
             return;
         }
 
         Long creatorId = CurrentUser.getUserId();
         if (creatorId == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("No logged-in user.");
             return;
         }
 
+        messageLabel.setStyle("-fx-text-fill: black;");
         messageLabel.setText("Creating task...");
 
         new Thread(() -> {
@@ -104,11 +110,17 @@ public class CreateTaskController {
                 body.setDescription(description == null ? "" : description);
                 body.setStatus(status);
                 // If deadline is empty, keep null (backend will accept null)
-                body.setDeadline(deadlineText == null || deadlineText.isBlank() ? null : deadlineText);
+                body.setDeadline(
+                        deadlineText == null || deadlineText.isBlank()
+                                ? null
+                                : deadlineText
+                );
 
                 String jsonBody = objectMapper.writeValueAsString(body);
 
-                String url = "http://localhost:8080/api/tasks?groupId=" + groupId + "&creatorId=" + creatorId;
+                String url = "http://localhost:8080/api/tasks"
+                        + "?groupId=" + groupId
+                        + "&creatorId=" + creatorId;
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
@@ -130,10 +142,21 @@ public class CreateTaskController {
                     });
                 } else {
                     String msg = "Failed to create task. Status: " + statusCode;
-                    Platform.runLater(() -> messageLabel.setText(msg));
+                    String bodyText = response.body();
+                    if (bodyText != null && !bodyText.isBlank()) {
+                        msg += "\n" + bodyText;
+                    }
+                    String finalMsg = msg;
+                    Platform.runLater(() -> {
+                        messageLabel.setStyle("-fx-text-fill: red;");
+                        messageLabel.setText(finalMsg);
+                    });
                 }
             } catch (Exception e) {
-                Platform.runLater(() -> messageLabel.setText("Error: " + e.getMessage()));
+                Platform.runLater(() -> {
+                    messageLabel.setStyle("-fx-text-fill: red;");
+                    messageLabel.setText("Error: " + e.getMessage());
+                });
             }
         }).start();
     }
@@ -188,4 +211,5 @@ public class CreateTaskController {
         }
     }
 }
+
 

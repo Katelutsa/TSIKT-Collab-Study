@@ -1,6 +1,7 @@
 package com.example.client.controller;
 
 import com.example.client.ClientApplication;
+import com.example.client.CurrentUser;           // 🔹 додано
 import com.example.client.GroupListItem;
 import com.example.client.dto.MembershipDto;
 import com.example.client.dto.UserDto;
@@ -156,6 +157,13 @@ public class ManageMembersController {
             return;
         }
 
+        Long actorId = CurrentUser.getUserId();
+        if (actorId == null) {
+            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setText("No logged-in user (actorId is null).");
+            return;
+        }
+
         messageLabel.setStyle("-fx-text-fill: black;");
         messageLabel.setText("Adding member...");
 
@@ -183,11 +191,12 @@ public class ManageMembersController {
                 UserDto user = objectMapper.readValue(findResponse.body(), UserDto.class);
                 Long userId = user.getUserId();
 
-                // 2. POST /api/memberships?userId=&groupId=&role=
+                // 2. POST /api/memberships?userId=&groupId=&role=&actorId=
                 String postUrl = "http://localhost:8080/api/memberships"
                         + "?userId=" + userId
                         + "&groupId=" + groupId
-                        + "&role=" + role;
+                        + "&role=" + role
+                        + "&actorId=" + actorId;   // 🔹 додаємо actorId
 
                 HttpRequest postRequest = HttpRequest.newBuilder()
                         .uri(URI.create(postUrl))
@@ -229,4 +238,5 @@ public class ManageMembersController {
         }
     }
 }
+
 
