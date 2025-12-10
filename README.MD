@@ -1,4 +1,7 @@
 # Collab-study
+
+## 1. Stručný popis projektu
+
 **Collab-Study** je desktopová aplikácia vytvorená ako dvojmodulový Maven projekt, pozostávajúci z:
 
 - **server/** – backend (Spring Boot 3, SQLite, REST API, WebSocket)
@@ -6,112 +9,197 @@
 
 Cieľom aplikácie je umožniť študentom spolupracovať v študijných skupinách, zdieľať úlohy, zdroje a dostávať aktualizácie v reálnom čase. Každý používateľ môže:
 
-- vytvárať alebo spravovať študijné skupiny,
+- vytvárať a spravovať študijné skupiny,
 - pridávať členov s rolami (`OWNER`, `ADMIN`, `MEMBER`),
 - vytvárať, upravovať a sledovať úlohy,
 - nahrávať a editovať študijné materiály,
 - vidieť automatické zmeny v úlohách a zdrojoch v reálnom čase (WebSocket),
 - prezerať si históriu aktivít (log udalostí).
 
-------
+Aplikácia pozostáva z troch hlavných častí:
 
-### Aplikácia pozostáva z troch hlavných častí:
+### **JavaFX klient**
 
-### **1. JavaFX klient**
+Používateľské rozhranie bežiace ako desktopová aplikácia.
 
-JavaFX aplikácia zabezpečuje používateľské rozhranie.  
-Po spustení používateľ vidí prihlasovacie okno:
+**Prihlasovacie okno:**
 
-> ![Login screen](client/docs/ui-login.png)
+![Login screen](client/docs/ui-login.png)
 
-Po prihlásení sa otvorí hlavné okno aplikácie.
-V hlavnom okne sa nachádzajú tri hlavné záložky:
+**Záložka Groups:**
 
-- **Groups** — správa skupín, členov a rolí
-  > ![Groups tab](client/docs/ui-groups.png)
+![Groups tab](client/docs/ui-groups.png)
 
-- **Tasks** — vytváranie a správa úloh
-  >![Tasks tab](client/docs/ui-tasks.png)
+**Záložka Tasks:**
 
-- **Resources** — nahrávanie a zdieľanie materiálov
-  > ![Resources tab](client/docs/ui-resources.png)
+![Tasks tab](client/docs/ui-tasks.png)
 
-Klient komunikuje so serverom pomocou:
+**Záložka Resources:**
 
+![Resources tab](client/docs/ui-resources.png)
+
+Klient komunikuje cez:
 - REST API (`java.net.http.HttpClient`)
-- WebSocket pripojenia (`ws://localhost:8080/ws/updates`) na príjem real-time zmien
+- WebSocket (`ws://localhost:8080/ws/updates`) pre aktualizácie v reálnom čase
 
-------
+---
 
-### **2. Backend – Spring Boot**
+### **Backend – Spring Boot**
 
 Backend poskytuje:
 
-- komplexné REST API pre všetky entity:
-    - `User`, `Group`, `Membership`, `Task`, `Resource`, `ActivityLog`
-- validačné pravidlá (`@Valid`)
-- správu rolí a oprávnení:
-    - iba **OWNER/ADMIN** môžu vytvárať alebo mazať úlohy
-    - iba **OWNER** môže pridávať členov
-- pripojenie na databázu SQLite pomocou JPA/Hibernate
-- WebSocket endpoint pre real-time push aktualizácie
+- REST API pre všetky entity
+- validáciu vstupov
+- zabezpečenie správou rolí
+- WebSocket pre real-time oznámenia
+- SQLite databázu s entitami:
+  `User`, `Group`, `Membership`, `Task`, `Resource`, `ActivityLog`
 
-Architektúra backendu pozostáva z vrstiev:
+---
 
-- **entity/**
-- **repository/**
-- **controller/**
-- **service/** (napr. ActivityLogService)
+### **Databáza – SQLite**
 
-------
+Databázový model:
 
-### **3. Databáza – SQLite**
+![ER Diagram](client/docs/er-diagram.png)
 
-Databáza obsahuje tabuľky:
-
-- `users`
-- `groups`
-- `memberships`
-- `tasks`
-- `resources`
-- `activity_log`
-
-K projektu patrí aj ER diagram:
-
-> 🖼 **Sem vlož ER diagram**  
-> _INSERT: docs/er-diagram.png_
-
-------
-
-### **Cieľ riešenia**
-
-Hlavnou úlohou projektu je predviesť komplexnú spolupracujúcu architektúru:
-
-- **JavaFX** (desktop UI)
-- **Spring Boot** (REST + WebSocket)
-- **SQLite** (perzistencia údajov)
-
-Aplikačný tok znázorňuje kompletné životné cykly:
-
-- používateľov,
-- skupín,
-- členstva,
-- úloh,
-- študijných materiálov,
-- logovania aktivít.
-
-Aplikácia podporuje aj **reálne-time spoluprácu**, napríklad keď jeden používateľ vytvorí úlohu, ostatní ju uvidia okamžite bez reloadu.
-
-## 1. Stručný popis projektu
+---
 
 ## 2. Architektúra systému
 
+Systém je navrhnutý ako **klient–server aplikácia**, kde komunikácia prebieha:
+- synchronne cez **REST API**
+- asynchrónne cez **WebSocket**
+
+---
+
+### 2.1 Serverová architektúra (Spring Boot)
+
+Backend pozostáva z vrstiev:
+
+- **Controller vrstva**  
+  Definuje REST API – používateľ, skupiny, úlohy, zdroje, členstvo, logy, WebSocket.
+
+- **Service vrstva**  
+  Obsahuje logiku pre logovanie aktivít (`ActivityLogService`).
+
+- **Repository vrstva**  
+  Implementovaná pomocou Spring Data JPA.
+
+- **Databázová vrstva**  
+  SQLite databáza `collab-study.db`.
+
+---
+
+### 2.2 Klientská architektúra (JavaFX)
+
+JavaFX je rozdelená na:
+
+- prihlasovací modul,
+- hlavné okno (`MainController`),
+- tri funkčné sekcie: **Groups**, **Tasks**, **Resources**,
+- spracovanie WebSocket správ,
+- dialógy: create/edit/change status.
+
+Používajú sa DTO objekty a FXML rozhranie.
+
+---
+
+### 2.3 Komunikácia klient ⇄ server
+
+#### REST API
+Používa sa na:
+- získanie dát,
+- vytváranie úloh/skupín,
+- úpravu entít,
+- mazanie,
+- prihlasovanie.
+
+Ukážka REST dotazu v Postmane:
+
+![Postman](client/docs/postman.png)
+
+#### WebSocket
+Používa sa na push udalosti:
+
+- `TASK_CREATED`, `TASK_UPDATED`, `TASK_STATUS_CHANGED`, `TASK_DELETED`
+- `RESOURCE_CREATED`, `RESOURCE_UPDATED`, `RESOURCE_DELETED`
+
+Po prijatí udalosti klient automaticky obnoví obsah tabuľky.
+
+---
+
 ## 3. Databázový model
+
+Databázová schéma zahŕňa tabuľky:
+
+- users
+- groups
+- memberships
+- tasks
+- resources
+- activity_log
+
+Každá entita má vzťahy definované pomocou JPA anotácií.
+
+> ![ER Diagram](client/docs/er-diagram.png)
+
+---
 
 ## 4. REST API a WebSocket
 
+### Hlavné REST endpointy:
+
+- `/api/users` – registrácia, login, správa používateľov
+- `/api/groups` – správa skupín
+- `/api/memberships` – členovia a roly
+- `/api/tasks` – CRUD úloh
+- `/api/resources` – zdieľané materiály
+- `/api/activity` – log aktivít
+
+### WebSocket endpoint:
+
+Klient implementuje odchytávanie správ v `WebSocketClient.java`.
+
+---
+
 ## 5. Používateľské rozhranie (JavaFX)
+
+Aplikácia pozostáva zo štyroch hlavných obrazoviek:
+
+1. **Login screen**
+2. **Groups tab** (zobrazenie skupín + správa členov)
+3. **Tasks tab** (tvorba, úprava, zmena stavu, mazanie)
+4. **Resources tab** (materiály)
+
+Každá záložka má vlastný controller, FXML súbor a podporuje:
+- validáciu vstupov,
+- komunikáciu s API,
+- automatické aktualizácie z WebSocket.
+
+---
 
 ## 6. Výzvy a riešenia
 
+| Výzva | Riešenie |
+|-------|----------|
+| Synchronizácia údajov medzi viacerými klientmi | WebSocket broadcast a Live refresh v UI |
+| Riadenie rolí (OWNER/ADMIN/MEMBER) | Logika v JavaFX + kontrola na serveri |
+| Logovanie udalostí | `ActivityLogService` + REST endpointy |
+| Správa databázy SQLite | JPA + automatická tvorba schémy |
+| Oddelenie client/server | Maven multimodulový projekt |
+
+---
+
 ## 7. Zhodnotenie práce s AI
+
+Pri vývoji projektu bola AI využitá ako:
+- konzultant architektúry,
+- pomocník pri návrhu REST API,
+- generátor návrhov UI,
+- nástroj na ladeniu chýb v JavaFX/Spring,
+- pomocník pri písaní dokumentácie.
+
+AI výrazne zrýchlila vývoj, najmä vo fáze návrhu, refaktoringu kódu a pri riešení chýb.
+
+---
