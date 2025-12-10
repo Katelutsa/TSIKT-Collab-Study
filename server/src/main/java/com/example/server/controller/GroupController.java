@@ -2,16 +2,15 @@ package com.example.server.controller;
 
 import com.example.server.entity.Group;
 import com.example.server.entity.User;
+import com.example.server.exception.ResourceNotFoundException;
 import com.example.server.repository.GroupRepository;
 import com.example.server.repository.UserRepository;
-import org.springframework.web.bind.annotation.*;
+import com.example.server.service.ActivityLogService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-
-import com.example.server.exception.ResourceNotFoundException;
-
 
 @RestController
 @RequestMapping("/api/groups")
@@ -19,11 +18,14 @@ public class GroupController {
 
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     public GroupController(GroupRepository groupRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           ActivityLogService activityLogService) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
     }
 
     // GET /api/groups — всі групи
@@ -49,6 +51,7 @@ public class GroupController {
         return groupRepository.findByCreatedBy(user);
     }
 
+    // GET /api/groups/by-member/{userId}
     @GetMapping("/by-member/{userId}")
     public List<Group> getGroupsByMember(@PathVariable("userId") Long userId) {
         User user = userRepository.findById(userId)
@@ -73,7 +76,16 @@ public class GroupController {
             group.setCreatedAt(LocalDateTime.now());
         }
 
-        return groupRepository.save(group);
+        Group saved = groupRepository.save(group);
+
+        // 🔹 лог активності
+        activityLogService.log(
+                creatorId,
+                "GROUP_CREATED",
+                "Created group '" + saved.getName() + "' (id=" + saved.getGroupId() + ")"
+        );
+
+        return saved;
     }
 
     @PutMapping("/{id}")
@@ -87,7 +99,19 @@ public class GroupController {
         existingGroup.setName(updatedGroup.getName());
         existingGroup.setDescription(updatedGroup.getDescription());
 
-        return groupRepository.save(existingGroup);
+        Group saved = groupRepository.save(existingGroup);
+
+        Long ownerId = (saved.getCreatedBy() != null)
+                ? saved.getCreatedBy().getUserId()
+                : null;
+
+        activityLogService.log(
+                ownerId,
+                "GROUP_UPDATED",
+                "Updated group '" + saved.getName() + "' (id=" + saved.getGroupId() + ")"
+        );
+
+        return saved;
     }
 
     // DELETE /api/groups/{id}
@@ -96,9 +120,18 @@ public class GroupController {
         Group group = groupRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Group with id " + id + " not found"));
 
-        groupRepository.delete(group);
-    }
+        Long ownerId = (group.getCreatedBy() != null)
+                ? group.getCreatedBy().getUserId()
+                : null;
 
+        groupRepository.delete(group);
+
+        activityLogService.log(
+                ownerId,
+                "GROUP_DELETED",
+                "Deleted group '" + group.getName() + "' (id=" + group.getGroupId() + ")"
+        );
+    }
 }
 
 

@@ -1,17 +1,15 @@
 package com.example.server.controller;
 
 import com.example.server.entity.User;
-import com.example.server.repository.UserRepository;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import com.example.server.exception.ResourceNotFoundException;
-
+import com.example.server.repository.UserRepository;
+import com.example.server.service.ActivityLogService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import jakarta.validation.Valid;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
 
 @RestController
 @RequestMapping("/api/users")
@@ -19,11 +17,15 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final ActivityLogService activityLogService;
 
-    // Spring сам передасть реалізацію UserRepository і BCryptPasswordEncoder в конструктор
-    public UserController(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
+    // Spring сам передасть реалізацію UserRepository, BCryptPasswordEncoder і ActivityLogService
+    public UserController(UserRepository userRepository,
+                          BCryptPasswordEncoder passwordEncoder,
+                          ActivityLogService activityLogService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.activityLogService = activityLogService;
     }
 
     // GET /api/users — повертає всіх користувачів
@@ -38,7 +40,6 @@ public class UserController {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
     }
-
 
     // GET /api/users/by-email?email=...
     @GetMapping("/by-email")
@@ -61,13 +62,20 @@ public class UserController {
             throw new ResourceNotFoundException("Invalid email or password");
         }
 
+        // 🔹 Лог активності: успішний логін
+        activityLogService.log(
+                user.getUserId(),
+                "USER_LOGGED_IN",
+                "User logged in with email " + user.getEmail()
+        );
+
         // 3. Щоб не віддавати хеш пароля в JSON — зануляємо його
         user.setPasswordHash(null);
 
         return user;
     }
 
-    // POST /api/users — створення нового користувача
+    // POST /api/users — створення нового користувача (реєстрація)
     @PostMapping
     public User createUser(@Valid @RequestBody User user) {
         // Беремо "сирий" пароль з поля passwordHash (тимчасово так, щоб не міняти entity/JSON)
@@ -77,8 +85,21 @@ public class UserController {
         String encodedPassword = passwordEncoder.encode(rawPassword);
         user.setPasswordHash(encodedPassword);
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+
+        // 🔹 Лог активності: реєстрація
+        activityLogService.log(
+                saved.getUserId(),
+                "USER_REGISTERED",
+                "New user registered with email " + saved.getEmail()
+        );
+
+        // Щоб знову не світити хеш в JSON
+        saved.setPasswordHash(null);
+
+        return saved;
     }
+
     @PutMapping("/{id}")
     public User updateUser(
             @PathVariable("id") Long id,
@@ -97,16 +118,37 @@ public class UserController {
             existingUser.setPasswordHash(encodedPassword);
         }
 
-        return userRepository.save(existingUser);
+        User saved = userRepository.save(existingUser);
+
+        // 🔹 Лог активності: оновлення профілю
+        activityLogService.log(
+                saved.getUserId(),
+                "USER_UPDATED",
+                "User profile updated (email=" + saved.getEmail() + ")"
+        );
+
+        saved.setPasswordHash(null);
+
+        return saved;
     }
+
     // DELETE /api/users/{id} — видалити користувача
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable("id") Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User with id " + id + " not found");
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User with id " + id + " not found"));
+
+        String email = user.getEmail();
+
+        userRepository.delete(user);
+
+        // 🔹 Лог активності: видалення користувача
+        activityLogService.log(
+                id,
+                "USER_DELETED",
+                "User with email " + email + " was deleted"
+        );
+
         return ResponseEntity.noContent().build();
     }
 }
-

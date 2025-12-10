@@ -13,10 +13,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -26,13 +23,23 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
-
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.Optional;
 
 // Controller for the "Tasks" tab
 public class TasksController {
+
+    // ===== статичний інстанс для доступу з MainController =====
+    private static TasksController instance;
+
+    public TasksController() {
+        instance = this;
+    }
+
+    public static TasksController getInstance() {
+        return instance;
+    }
 
     @FXML
     private ComboBox<GroupListItem> groupComboBox;
@@ -269,16 +276,22 @@ public class TasksController {
         }).start();
     }
 
-
     @FXML
     private void onReloadGroupsClick() {
         loadGroupsForCurrentUser();
     }
 
-
     // Called from CreateTaskController/EditTaskController
     public void reloadTasksForGroup(Long groupId) {
         loadTasksByGroup(groupId);
+    }
+
+    // Викликається з WebSocket (через MainController)
+    public void reloadTasksForSelectedGroup() {
+        GroupListItem selectedGroup = groupComboBox.getSelectionModel().getSelectedItem();
+        if (selectedGroup != null) {
+            loadTasksByGroup(selectedGroup.getGroupId());
+        }
     }
 
     private void loadGroupsForCurrentUser() {
@@ -294,41 +307,63 @@ public class TasksController {
 
         new Thread(() -> {
             try {
-                String url = "http://localhost:8080/api/groups/by-creator/" + userId;
+                String urlCreated = "http://localhost:8080/api/groups/by-creator/" + userId;
+                String urlMember  = "http://localhost:8080/api/groups/by-member/" + userId;
 
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create(url))
+                HttpRequest reqCreated = HttpRequest.newBuilder()
+                        .uri(URI.create(urlCreated))
                         .GET()
                         .build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                HttpRequest reqMember = HttpRequest.newBuilder()
+                        .uri(URI.create(urlMember))
+                        .GET()
+                        .build();
 
-                if (response.statusCode() == 200) {
-                    List<GroupDto> groupList = objectMapper.readValue(
-                            response.body(),
+                HttpResponse<String> respCreated =
+                        httpClient.send(reqCreated, HttpResponse.BodyHandlers.ofString());
+                HttpResponse<String> respMember  =
+                        httpClient.send(reqMember, HttpResponse.BodyHandlers.ofString());
+
+                List<GroupDto> createdList = List.of();
+                List<GroupDto> memberList  = List.of();
+
+                if (respCreated.statusCode() == 200) {
+                    createdList = objectMapper.readValue(
+                            respCreated.body(),
                             new TypeReference<List<GroupDto>>() {}
                     );
-
-                    Platform.runLater(() -> {
-                        groupsData.clear();
-                        for (GroupDto g : groupList) {
-                            groupsData.add(new GroupListItem(g.getGroupId(), g.getName()));
-                        }
-
-                        statusLabel.setStyle("-fx-text-fill: green;");
-                        statusLabel.setText("Loaded " + groupList.size() + " groups.");
-
-                        if (!groupsData.isEmpty()) {
-                            groupComboBox.getSelectionModel().selectFirst();
-                        }
-                    });
-                } else {
-                    String errorText = "Failed to load groups. Status: " + response.statusCode();
-                    Platform.runLater(() -> {
-                        statusLabel.setStyle("-fx-text-fill: red;");
-                        statusLabel.setText(errorText);
-                    });
                 }
+
+                if (respMember.statusCode() == 200) {
+                    memberList = objectMapper.readValue(
+                            respMember.body(),
+                            new TypeReference<List<GroupDto>>() {}
+                    );
+                }
+
+                // Обʼєднуємо без дублікатів (key = groupId)
+                Map<Long, GroupListItem> map = new LinkedHashMap<>();
+                for (GroupDto g : createdList) {
+                    map.put(g.getGroupId(), new GroupListItem(g.getGroupId(), g.getName()));
+                }
+                for (GroupDto g : memberList) {
+                    map.putIfAbsent(g.getGroupId(), new GroupListItem(g.getGroupId(), g.getName()));
+                }
+
+                ObservableList<GroupListItem> items = FXCollections.observableArrayList(map.values());
+
+                Platform.runLater(() -> {
+                    groupsData.setAll(items);
+
+                    statusLabel.setStyle("-fx-text-fill: green;");
+                    statusLabel.setText("Loaded " + items.size() + " groups.");
+
+                    if (!groupsData.isEmpty()) {
+                        groupComboBox.getSelectionModel().selectFirst();
+                    }
+                });
+
             } catch (Exception e) {
                 Platform.runLater(() -> {
                     statusLabel.setStyle("-fx-text-fill: red;");
@@ -380,6 +415,8 @@ public class TasksController {
         }).start();
     }
 }
+
+
 
 
 

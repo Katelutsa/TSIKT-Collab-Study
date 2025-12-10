@@ -10,10 +10,9 @@ import java.util.List;
 
 public interface GroupRepository extends JpaRepository<Group, Long> {
 
-    // Групи, які створив конкретний користувач
+
     List<Group> findByCreatedBy(User createdBy);
 
-    // Усі групи, в яких користувач є членом (через Membership)
     @Query("""
        select m.group
        from Membership m

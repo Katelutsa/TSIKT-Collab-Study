@@ -7,26 +7,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import com.example.client.controller.RegisterController;
-
-// Controller for login screen
 public class LoginController {
 
     @FXML
@@ -38,7 +26,7 @@ public class LoginController {
     @FXML
     private Label messageLabel;
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final java.net.http.HttpClient httpClient = java.net.http.HttpClient.newHttpClient();
 
     // ObjectMapper is configured to ignore unknown JSON fields
     private final ObjectMapper objectMapper = new ObjectMapper()
@@ -69,13 +57,14 @@ public class LoginController {
                 LoginRequest loginRequest = new LoginRequest(email, password);
                 String jsonBody = objectMapper.writeValueAsString(loginRequest);
 
-                HttpRequest request = HttpRequest.newBuilder()
-                        .uri(URI.create("http://localhost:8080/api/users/login"))
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create("http://localhost:8080/api/users/login"))
                         .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonBody))
                         .build();
 
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                java.net.http.HttpResponse<String> response =
+                        httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
 
                 if (response.statusCode() == 200) {
                     // Deserialize backend User entity
@@ -90,7 +79,6 @@ public class LoginController {
                         // Save user globally
                         CurrentUser.set(user.getUserId(), user.getName(), user.getEmail());
 
-                        // Open main window
                         openMainWindow();
 
                         // Close login window
@@ -143,7 +131,6 @@ public class LoginController {
         }
     }
 
-
     // DTO for login request body
     public static class LoginRequest {
         private String email;
@@ -174,9 +161,8 @@ public class LoginController {
         }
     }
 
-    // DTO matching backend User JSON (only fields we care about)
     public static class UserDto {
-        private Long userId; // matches entity field "userId"
+        private Long userId;
         private String name;
         private String email;
 
@@ -214,18 +200,20 @@ public class LoginController {
                     ClientApplication.class.getResource("main-view.fxml")
             );
 
-            Scene scene = new Scene(loader.load(), 800, 600);
+            Parent root = loader.load();
+            Scene scene = new Scene(root, 800, 600);
 
             Stage stage = new Stage();
             stage.setTitle("Collab Study - Dashboard");
             stage.setScene(scene);
             stage.show();
 
-            System.out.println("Main screen loaded.");
+            System.out.println("Main screen loaded (from LoginController).");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 }
+
 
 

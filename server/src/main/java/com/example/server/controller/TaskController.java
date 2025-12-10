@@ -3,19 +3,21 @@ package com.example.server.controller;
 import com.example.server.entity.Group;
 import com.example.server.entity.Task;
 import com.example.server.entity.User;
+import com.example.server.exception.ResourceNotFoundException;
 import com.example.server.repository.GroupRepository;
 import com.example.server.repository.TaskRepository;
 import com.example.server.repository.UserRepository;
+import com.example.server.service.ActivityLogService;
+import com.example.server.websocket.WebSocketEventController;
+import com.example.server.websocket.dto.WsMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
-import jakarta.validation.Valid;
-
-import com.example.server.exception.ResourceNotFoundException;
 @RestController
 @RequestMapping("/api/tasks")
 public class TaskController {
@@ -23,13 +25,35 @@ public class TaskController {
     private final TaskRepository taskRepository;
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
+    private final WebSocketEventController webSocketEventController;
+    private final ObjectMapper objectMapper;
 
     public TaskController(TaskRepository taskRepository,
                           GroupRepository groupRepository,
-                          UserRepository userRepository) {
+                          UserRepository userRepository,
+                          ActivityLogService activityLogService,
+                          WebSocketEventController webSocketEventController,
+                          ObjectMapper objectMapper) {
         this.taskRepository = taskRepository;
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
+        this.activityLogService = activityLogService;
+        this.webSocketEventController = webSocketEventController;
+        this.objectMapper = objectMapper;
+    }
+
+    // === HELPERS ===
+
+    private void sendWsEvent(String type, Long taskId) {
+        try {
+            String json = objectMapper.writeValueAsString(
+                    new WsMessage(type, taskId.toString())
+            );
+            webSocketEventController.broadcast(json);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // GET /api/tasks/{id} — одна задача
@@ -71,40 +95,52 @@ public class TaskController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
             LocalDateTime deadline
     ) {
-
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Group with id " + groupId + " not found"));
 
         return taskRepository.findByGroupAndDeadlineBefore(group, deadline);
     }
+
     // POST /api/tasks?groupId=...&creatorId=...
-        @PostMapping
-        public Task createTask(
-                @RequestParam("groupId") Long groupId,
-                @RequestParam("creatorId") Long creatorId,
-                @Valid @RequestBody Task task
-        ) {
-            Group group = groupRepository.findById(groupId)
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("Group with id " + groupId + " not found"));
+    @PostMapping
+    public Task createTask(
+            @RequestParam("groupId") Long groupId,
+            @RequestParam("creatorId") Long creatorId,
+            @Valid @RequestBody Task task
+    ) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Group with id " + groupId + " not found"));
 
-            User creator = userRepository.findById(creatorId)
-                    .orElseThrow(() ->
-                            new ResourceNotFoundException("User with id " + creatorId + " not found"));
+        User creator = userRepository.findById(creatorId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User with id " + creatorId + " not found"));
 
-            task.setGroup(group);
-            task.setCreatedBy(creator);
+        task.setGroup(group);
+        task.setCreatedBy(creator);
 
-            if (task.getCreatedAt() == null) {
-                task.setCreatedAt(LocalDateTime.now());
-            }
-            if (task.getStatus() == null) {
-                task.setStatus("OPEN");
-            }
-
-            return taskRepository.save(task);
+        if (task.getCreatedAt() == null) {
+            task.setCreatedAt(LocalDateTime.now());
         }
+        if (task.getStatus() == null) {
+            task.setStatus("OPEN");
+        }
+
+        Task saved = taskRepository.save(task);
+
+        // 🔹 лог активності
+        activityLogService.log(
+                creatorId,
+                "TASK_CREATED",
+                "Created task '" + saved.getTitle() + "' (id=" + saved.getTaskId() + ") in group '" + group.getName() + "'"
+        );
+
+        // 🔹 WebSocket подія
+        sendWsEvent("TASK_CREATED", saved.getTaskId());
+
+        return saved;
+    }
 
     // PUT /api/tasks/{id} — оновлення задачі
     @PutMapping("/{id}")
@@ -120,7 +156,21 @@ public class TaskController {
         existingTask.setDeadline(updatedTask.getDeadline());
         existingTask.setStatus(updatedTask.getStatus());
 
-        return taskRepository.save(existingTask);
+        Task saved = taskRepository.save(existingTask);
+
+        Long actorId = (saved.getCreatedBy() != null)
+                ? saved.getCreatedBy().getUserId()
+                : null;
+
+        activityLogService.log(
+                actorId,
+                "TASK_UPDATED",
+                "Updated task '" + saved.getTitle() + "' (id=" + saved.getTaskId() + ")"
+        );
+
+        sendWsEvent("TASK_UPDATED", saved.getTaskId());
+
+        return saved;
     }
 
     // PATCH /api/tasks/{id}/status?status=DONE
@@ -134,7 +184,22 @@ public class TaskController {
                         new ResourceNotFoundException("Task with id " + id + " not found"));
 
         task.setStatus(status);
-        return taskRepository.save(task);
+
+        Task saved = taskRepository.save(task);
+
+        Long actorId = (saved.getCreatedBy() != null)
+                ? saved.getCreatedBy().getUserId()
+                : null;
+
+        activityLogService.log(
+                actorId,
+                "TASK_STATUS_CHANGED",
+                "Changed status of task '" + saved.getTitle() + "' (id=" + saved.getTaskId() + ") to " + status
+        );
+
+        sendWsEvent("TASK_STATUS_CHANGED", saved.getTaskId());
+
+        return saved;
     }
 
     // DELETE /api/tasks/{id}
@@ -143,7 +208,21 @@ public class TaskController {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task with id " + id + " not found"));
 
+        Long actorId = (task.getCreatedBy() != null)
+                ? task.getCreatedBy().getUserId()
+                : null;
+
+        String title = task.getTitle();
+        Long taskId = task.getTaskId();
+
         taskRepository.delete(task);
+
+        activityLogService.log(
+                actorId,
+                "TASK_DELETED",
+                "Deleted task '" + title + "' (id=" + taskId + ")"
+        );
+
+        sendWsEvent("TASK_DELETED", taskId);
     }
 }
-
